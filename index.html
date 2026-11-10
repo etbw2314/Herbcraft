@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Herbcraft scoresheet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
+<style>
+:root{--bg:#f4f4f2;--surface:#fff;--ink:#2b2c2f;--muted:#7b7e86;--line:#cfd0cc;--head:#6f7075;--headink:#fff;--accent:#2f5bea;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16171a;--surface:#1f2125;--ink:#ecedf0;--muted:#8d9099;--line:#3a3c42;--head:#4b4e55;--headink:#f1f1f3;--accent:#8aa4ff}}
+:root[data-theme="dark"]{--bg:#16171a;--surface:#1f2125;--ink:#ecedf0;--muted:#8d9099;--line:#3a3c42;--head:#4b4e55;--headink:#f1f1f3;--accent:#8aa4ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:480px;margin:0 auto;padding:20px 12px 48px}
+h1{font-size:1.35rem;margin:0 0 12px;font-weight:700}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.tab,.btn{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 12px;cursor:pointer}
+.tab b{margin-left:6px;color:var(--accent)}
+.tab[aria-pressed="true"]{background:var(--head);color:var(--headink);border-color:var(--head)}
+.tab[aria-pressed="true"] b{color:var(--headink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.bar{display:flex;align-items:stretch;border:2px solid var(--head);border-radius:14px;overflow:hidden;background:var(--surface)}
+.bar>span{background:var(--head);color:var(--headink);font-weight:700;padding:12px 14px;display:flex;align-items:center}
+.bar>input,.bar>output{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;padding:0 12px}
+.bar output{font-size:1.4rem;font-weight:700;text-align:center;display:flex;align-items:center;justify-content:center}
+.bar.total{width:62%;margin:14px 0 0 auto}
+table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;margin-top:14px;border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--head)}
+th,td{padding:0;text-align:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);height:56px}
+tr>*:last-child{border-right:0}tbody tr:last-child>*{border-bottom:0}
+thead th{background:var(--head);color:var(--headink);height:auto;padding:6px 2px;font-size:.78rem;font-weight:700;border-color:var(--surface)}
+thead .sub{font-size:1.05rem;font-weight:400;padding:4px 0}
+thead small{display:block;font-size:.58rem;font-style:italic;font-weight:400;line-height:1.15}
+tbody th{background:var(--head);color:var(--headink);font-size:1.2rem;border-color:var(--surface)}
+td input{width:100%;height:100%;border:0;background:none;color:var(--ink);font:inherit;text-align:center;padding:0;border-radius:0;-moz-appearance:textfield}
+td input::-webkit-outer-spin-button,td input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+td.rv,td.un{font-weight:700;font-size:1.05rem}td.un{color:var(--muted)}
+td.sh{padding:4px 0}
+.cl{display:flex;flex-direction:column;align-items:center;gap:3px}
+.cl div{display:flex;gap:3px}
+.c{width:clamp(15px,4.4vw,20px);height:clamp(15px,4.4vw,20px);border-radius:50%;border:1.5px solid var(--muted);background:none;padding:0;cursor:pointer;position:relative;color:var(--muted)}
+.c[data-s="1"]{background:var(--ink);border-color:var(--ink)}
+.c[data-s="2"]{opacity:.55}
+.c[data-s="2"]::before,.c[data-s="2"]::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1.5px;background:var(--ink);transform:translateX(-50%) rotate(45deg)}
+.c[data-s="2"]::after{transform:translateX(-50%) rotate(-45deg)}
+.conv{font-size:.7rem;font-style:italic;color:var(--muted);padding:0 6px}
+.foot{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.btn.quiet{border-color:transparent;background:none;color:var(--muted)}
+.btn:disabled{opacity:.4;cursor:default}
+</style>
+</head>
+<body>
+<main>
+  <h1>Herbcraft scoresheet</h1>
+  <div class="tabs" id="tabs"></div>
+  <div id="sheet"></div>
+  <div class="foot">
+    <button class="btn" id="add">Add player</button>
+    <button class="btn quiet" id="rm">Remove this player</button>
+    <button class="btn quiet" id="ng">New game</button>
+  </div>
+</main>
+<script>
+(function(){
+var KEY='herbcraft-sheets-v1',ROUNDS=6,MAXP=8;
+function np(){var r=[];for(var i=0;i<ROUNDS;i++)r.push({h:['','',''],s:[0,0,0,0,0,0,0,0,0,0],u:''});return{name:'',rounds:r}}
+function load(){try{var v=localStorage.getItem(KEY);return v?JSON.parse(v):null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+var S=load()||{players:[np(),np()],active:0};
+if(S.active>=S.players.length)S.active=0;
+var sheet=document.getElementById('sheet'),tabs=document.getElementById('tabs');
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function n(v){return parseFloat(v)||0}
+function cnt(r){return r.s.filter(function(v){return v===1}).length}
+function un(p,ri){return cnt(p.rounds[ri])}
+function rv(p,ri){var r=p.rounds[ri];return n(r.h[0])+n(r.h[1])+n(r.h[2])+un(p,ri)}
+function tot(p){return p.rounds.reduce(function(a,r,ri){return a+rv(p,ri)},0)}
+function fmt(x){return String(Math.round(x*100)/100)}
+function label(p,i){return p.name||('Player '+(i+1))}
+
+function renderTabs(){
+  tabs.innerHTML=S.players.map(function(p,i){
+    return '<button class="tab" data-tab="'+i+'" aria-pressed="'+(i===S.active)+'">'+esc(label(p,i))+'<b>'+fmt(tot(p))+'</b></button>'
+  }).join('');
+  document.getElementById('add').disabled=S.players.length>=MAXP;
+  document.getElementById('rm').disabled=S.players.length<=1;
+}
+function circles(r,ri){
+  var rows=[[0,1,2,3],[4,5,6],[7,8,9]];
+  return '<div class="cl">'+rows.map(function(row){
+    return '<div>'+row.map(function(k){
+      return '<button class="c" data-r="'+ri+'" data-k="'+k+'" data-s="'+r.s[k]+'" aria-label="Round '+(ri+1)+' shell pile '+(k+1)+'"></button>'
+    }).join('')+'</div>'
+  }).join('')+'</div>';
+}
+function renderSheet(){
+  var p=S.players[S.active],h='';
+  h+='<div class="bar"><span>Floramancer’s name</span><input data-name value="'+esc(p.name)+'" placeholder="Player '+(S.active+1)+'" aria-label="Floramancer’s name"></div>';
+  h+='<table><colgroup><col style="width:9%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:28%"><col style="width:12%"><col style="width:12%"></colgroup>';
+  h+='<thead><tr><th rowspan="2">Round</th><th colspan="3">Harvest VP</th><th colspan="2">Shell piles</th><th rowspan="2">Round VP</th></tr>';
+  h+='<tr><th class="sub">🌱💧<small>Sprout, Dew drop</small></th><th class="sub">🟠💨<small>Amber, Wisp</small></th><th class="sub">⚡🔴<small>Spark, Garnet</small></th><th><small>Tap to fill a pile, tap again to cross it out</small></th><th><small>VP from unused</small></th></tr></thead><tbody>';
+  p.rounds.forEach(function(r,ri){
+    h+='<tr><th scope="row">'+(ri+1)+'</th>';
+    for(var i=0;i<3;i++)h+='<td><input type="number" step="any" data-h="'+i+'" data-r="'+ri+'" value="'+esc(r.h[i])+'" aria-label="Round '+(ri+1)+' harvest VP '+(i+1)+'"></td>';
+    h+='<td class="sh">'+circles(r,ri)+'</td>';
+    h+='<td class="un" data-un="'+ri+'">'+un(p,ri)+'</td>';
+    h+='<td class="rv" data-rv="'+ri+'">'+fmt(rv(p,ri))+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  h+='<div class="bar total"><span>Total VP</span><output id="tv">'+fmt(tot(p))+'</output></div>';
+  sheet.innerHTML=h;
+}
+function refresh(){
+  var p=S.players[S.active];
+  p.rounds.forEach(function(r,ri){var c=sheet.querySelector('[data-rv="'+ri+'"]'),u=sheet.querySelector('[data-un="'+ri+'"]');if(c)c.textContent=fmt(rv(p,ri));if(u)u.textContent=un(p,ri)});
+  document.getElementById('tv').textContent=fmt(tot(p));
+  renderTabs();
+}
+function all(){renderTabs();renderSheet()}
+
+sheet.addEventListener('input',function(e){
+  var el=e.target,p=S.players[S.active];
+  if(el.hasAttribute('data-name')){p.name=el.value;renderTabs();save();return}
+  var r=p.rounds[+el.dataset.r];if(!r)return;
+  r.h[+el.dataset.h]=el.value;
+  save();refresh();
+});
+sheet.addEventListener('click',function(e){
+  var b=e.target.closest('.c');if(!b)return;
+  var r=S.players[S.active].rounds[+b.dataset.r],k=+b.dataset.k;
+  r.s[k]=(r.s[k]+1)%3;b.dataset.s=r.s[k];save();refresh();
+});
+tabs.addEventListener('click',function(e){
+  var b=e.target.closest('[data-tab]');if(!b)return;
+  S.active=+b.dataset.tab;save();all();
+});
+document.getElementById('add').onclick=function(){S.players.push(np());S.active=S.players.length-1;save();all()};
+var armed={};
+function twoStep(id,idle,ask,fn){
+  var b=document.getElementById(id);
+  b.onclick=function(){
+    if(armed[id]){clearTimeout(armed[id]);armed[id]=0;b.textContent=idle;fn();return}
+    b.textContent=ask;armed[id]=setTimeout(function(){armed[id]=0;b.textContent=idle},3000);
+  };
+}
+twoStep('rm','Remove this player','Tap again to remove',function(){
+  if(S.players.length<=1)return;
+  S.players.splice(S.active,1);S.active=Math.max(0,S.active-1);save();all();
+});
+twoStep('ng','New game','Tap again to clear everything',function(){
+  S.players=S.players.map(function(){return np()});S.active=0;save();all();
+});
+all();
+})();
+</script>
+</body>
+</html>
